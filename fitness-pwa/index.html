@@ -1,0 +1,2107 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>健身计划 Agent 小工具</title>
+  <meta name="theme-color" content="#16323a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="健身计划">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <style>
+    :root {
+      --bg: #f7f4ee;
+      --panel: #fffdfa;
+      --ink: #1e2428;
+      --muted: #6b7280;
+      --line: #d9ded8;
+      --green: #2d8a5f;
+      --amber: #c07a20;
+      --red: #c4493d;
+      --blue: #2f6f9f;
+      --yellow: #f6c64c;
+      --teal: #1f8a89;
+      --shadow: 0 14px 36px rgba(31, 36, 40, .09);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 24px;
+      background: #16323a;
+      color: #f8fbf8;
+      border-bottom: 4px solid #f6c64c;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #fff8de;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.1;
+      font-weight: 760;
+    }
+
+    .brand p {
+      margin: 4px 0 0;
+      color: #c9d7d9;
+      font-size: 13px;
+    }
+
+    .role-strip {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .role-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 9px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      color: #eef8f6;
+      background: rgba(255,255,255,.08);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--yellow);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 980px);
+      justify-content: center;
+      gap: 16px;
+      padding: 16px 16px 92px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .bottom-tabs {
+      position: fixed;
+      left: 50%;
+      bottom: 12px;
+      z-index: 20;
+      width: min(520px, calc(100vw - 24px));
+      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      padding: 7px;
+      border: 1px solid rgba(22, 50, 58, .18);
+      border-radius: 16px;
+      background: rgba(255, 253, 250, .94);
+      box-shadow: 0 16px 44px rgba(31, 36, 40, .18);
+      backdrop-filter: blur(14px);
+    }
+
+    .tab-button {
+      min-height: 48px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      gap: 2px;
+      color: #51606a;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .tab-button svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .tab-button.active {
+      color: #fff;
+      background: #16323a;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.2;
+      font-weight: 760;
+    }
+
+    .small-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .form {
+      display: grid;
+      gap: 13px;
+      padding: 14px 16px 16px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      color: #364148;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid #cfd7d1;
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      padding: 9px 10px;
+      outline: none;
+    }
+
+    .field textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .primary,
+    .secondary,
+    .danger,
+    .ghost {
+      min-height: 38px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 12px;
+      font-weight: 740;
+      line-height: 1.1;
+    }
+
+    .primary { background: #16323a; color: #fff; }
+    .secondary { background: #e7f1ee; color: #164b3b; }
+    .danger { background: #fff1ec; color: #9f342b; }
+    .ghost { background: transparent; color: #334155; border: 1px solid var(--line); }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-top: 2px;
+    }
+
+    .tag {
+      padding: 5px 7px;
+      border-radius: 999px;
+      background: #edf2f0;
+      color: #334155;
+      font-size: 12px;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .health-box {
+      padding: 10px;
+      border-radius: 6px;
+      background: #f4f7f8;
+      border: 1px solid #d9e3e4;
+      color: #334155;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .native-card {
+      display: grid;
+      gap: 9px;
+      padding: 10px;
+      border-radius: 7px;
+      border: 1px solid #d8e3e5;
+      background: #f3f8fb;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 0;
+      border-top: 1px solid #e2e8e3;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .toggle-row:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .toggle-row input {
+      width: 42px;
+      height: 22px;
+      accent-color: #16323a;
+    }
+
+    .prompt-card {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 7px;
+      border: 1px solid #d8e3e5;
+      background: #f6faf9;
+    }
+
+    .prompt-card textarea {
+      min-height: 150px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .prompt-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .file-input {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+
+    .followup-card {
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 7px;
+      border: 1px solid #d9e3d9;
+      background: #fbf8ee;
+    }
+
+    .followup-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .followup-card textarea {
+      min-height: 58px;
+    }
+
+    .engine-note {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 6px;
+      background: #eef6f7;
+      border: 1px solid #c9e1e4;
+      color: #2f454d;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .calendar-panel {
+      overflow: hidden;
+    }
+
+    .calendar-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .month-title {
+      font-size: 18px;
+      font-weight: 800;
+      min-width: 126px;
+      text-align: center;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfaf5;
+    }
+
+    .stat {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px;
+      background: #fff;
+    }
+
+    .stat b {
+      display: block;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .weekdays,
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(54px, 1fr));
+    }
+
+    .weekdays {
+      padding: 10px 12px 0;
+      color: #5c6870;
+      font-size: 12px;
+      font-weight: 750;
+      text-align: center;
+    }
+
+    .weekday {
+      padding: 7px 4px;
+    }
+
+    .calendar {
+      gap: 8px;
+      padding: 10px 12px 14px;
+    }
+
+    .day {
+      position: relative;
+      min-height: 88px;
+      border-radius: 8px;
+      border: 1px solid #d5ddd7;
+      background: #fff;
+      padding: 7px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      justify-items: center;
+      gap: 2px;
+      overflow: hidden;
+    }
+
+    .day:focus-visible {
+      outline: 3px solid rgba(47, 111, 159, .35);
+      outline-offset: 1px;
+    }
+
+    .day.other {
+      opacity: .45;
+      background: #f4f4f2;
+    }
+
+    .day.future {
+      border-style: dashed;
+    }
+
+    .day.completed {
+      background: #edf8f1;
+      border-color: #9ecfb6;
+    }
+
+    .day.deferred {
+      background: #fff8e9;
+      border-color: #edc775;
+    }
+
+    .day.silent {
+      background: #f7eeee;
+      border-color: #dfa59f;
+    }
+
+    .day.rest {
+      background: #f1f2f2;
+    }
+
+    .day.selected {
+      box-shadow: inset 0 0 0 3px rgba(47,111,159,.35);
+    }
+
+    .day-number {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .today-mark {
+      color: #fff;
+      background: var(--blue);
+      border-radius: 999px;
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+
+    .mascot {
+      width: 46px;
+      height: 46px;
+      margin: 1px auto;
+    }
+
+    .day.silent .mascot,
+    .day.rest .mascot {
+      filter: grayscale(1);
+      opacity: .66;
+    }
+
+    .day.deferred .mascot {
+      opacity: .58;
+    }
+
+    .day-label {
+      max-width: 100%;
+      color: #48555d;
+      font-size: 12px;
+      font-weight: 740;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .badge {
+      position: absolute;
+      right: 5px;
+      bottom: 5px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      border: 2px solid #fff;
+    }
+
+    .badge.done { background: var(--green); }
+    .badge.defer { background: var(--amber); }
+    .badge.warn { background: var(--red); }
+
+    .session {
+      padding: 14px 16px 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .selected-card {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfaf5;
+    }
+
+    .selected-card .mascot {
+      width: 66px;
+      height: 66px;
+    }
+
+    .selected-card h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .selected-card p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .exercise-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .exercise {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+    }
+
+    .exercise-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .exercise h4 {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .exercise a {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 760;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .exercise-meta {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .sets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 9px;
+    }
+
+    .set-check {
+      min-width: 42px;
+      height: 34px;
+      border-radius: 6px;
+      border: 1px solid #cbd5cf;
+      background: #f8faf9;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 780;
+    }
+
+    .set-check.active {
+      background: #dff3e8;
+      color: #14623f;
+      border-color: #83c6a5;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .timer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 8px;
+      background: #eef6f7;
+      border: 1px solid #c9e1e4;
+    }
+
+    .timer-time {
+      font-size: 30px;
+      font-weight: 850;
+      color: #17353d;
+    }
+
+    .adjustment {
+      display: grid;
+      gap: 9px;
+      padding: 12px;
+      border: 1px solid #d7e2d6;
+      border-radius: 8px;
+      background: #f5fbf3;
+    }
+
+    .adjustment h3 {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .adjustment p {
+      margin: 0;
+      color: #3c4a41;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .reason-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    dialog {
+      width: min(420px, calc(100vw - 32px));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 0;
+      background: var(--panel);
+    }
+
+    dialog::backdrop {
+      background: rgba(22, 50, 58, .28);
+    }
+
+    .dialog-body {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .dialog-body h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      padding: 12px 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .empty {
+      padding: 16px;
+      color: var(--muted);
+      border: 1px dashed #cbd5cf;
+      border-radius: 8px;
+      background: #fafafa;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1160px) {
+      .workspace {
+        grid-template-columns: minmax(0, 980px);
+      }
+    }
+
+    @media (max-width: 780px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .role-strip {
+        justify-content: flex-start;
+      }
+      .workspace {
+        grid-template-columns: 1fr;
+        padding: 10px;
+      }
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .weekdays,
+      .calendar {
+        grid-template-columns: repeat(7, minmax(42px, 1fr));
+      }
+      .calendar {
+        gap: 5px;
+        padding: 8px;
+      }
+      .day {
+        min-height: 74px;
+        padding: 5px;
+      }
+      .mascot {
+        width: 36px;
+        height: 36px;
+      }
+      .day-label {
+        font-size: 11px;
+      }
+      .two,
+      .actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" id="brandMascot" aria-hidden="true"></div>
+        <div>
+          <h1>健身计划 Agent 小工具</h1>
+          <p>问卷建档、训练月历、执行打卡、搁置反馈与周度调整</p>
+        </div>
+      </div>
+      <div class="role-strip" aria-label="协作角色">
+        <span class="role-pill"><span class="dot"></span>PM 拆解</span>
+        <span class="role-pill"><span class="dot"></span>架构工程</span>
+        <span class="role-pill"><span class="dot"></span>前端 UI</span>
+        <span class="role-pill"><span class="dot"></span>体验复核</span>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="panel tab-panel profile-panel" id="profileTab" data-tab-panel="profile">
+        <div class="panel-head">
+          <h2 class="panel-title">用户画像</h2>
+          <span class="small-note">私人体能管理师问卷</span>
+        </div>
+        <form class="form" id="profileForm">
+          <div class="two">
+            <div class="field">
+              <label for="goal">主目标</label>
+              <select id="goal">
+                <option>增肌</option>
+                <option>减脂</option>
+                <option>塑形</option>
+                <option>体能提升</option>
+                <option>康复</option>
+                <option>健康维护</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="level">训练背景</label>
+              <select id="level">
+                <option>长期不锻炼</option>
+                <option>新手</option>
+                <option>规律训练</option>
+                <option>进阶训练</option>
+              </select>
+            </div>
+          </div>
+          <div class="two">
+            <div class="field">
+              <label for="days">每周训练天数</label>
+              <input id="days" type="number" min="1" max="6" value="4">
+            </div>
+            <div class="field">
+              <label for="minutes">单次可用分钟</label>
+              <input id="minutes" type="number" min="15" max="120" value="45">
+            </div>
+          </div>
+          <div class="field">
+            <label for="equipment">可用器械</label>
+            <input id="equipment" value="哑铃, 弹力带, 瑜伽垫">
+          </div>
+          <div class="field">
+            <label for="injuries">伤病与限制</label>
+            <input id="injuries" value="膝盖旧伤">
+          </div>
+          <div class="field">
+            <label for="lifestyle">生活方式与恢复力</label>
+            <textarea id="lifestyle">久坐职业，睡眠偏少，压力中等，偏好家庭训练。</textarea>
+          </div>
+          <div class="field prompt-card">
+            <label for="wearablePrompt">健康数据导入</label>
+            <div class="native-card">
+              <strong>原生一键导入</strong>
+              <span class="small-note">Capacitor 打包后通过 HealthKit / Health Connect 读取近 90 天数据，并只在本机归约为摘要。</span>
+              <button class="primary" type="button" id="importNativeHealth">一键导入健康数据</button>
+              <div class="small-note" id="nativeHealthStatus">浏览器预览会使用本地模拟摘要；无法授权时可继续使用下方降级通道。</div>
+            </div>
+            <label for="wearablePrompt">降级通道：复制提示词，让您的 AI 替您读取手表数据填写</label>
+            <textarea id="wearablePrompt" readonly></textarea>
+            <div class="prompt-actions">
+              <button class="secondary" type="button" id="copyWearablePrompt">复制提示词</button>
+              <label class="ghost" for="wearableUpload">上传回填 JSON</label>
+            </div>
+            <input class="file-input" id="wearableUpload" type="file" accept=".json,application/json">
+            <div class="small-note" id="uploadStatus">AI 输出 JSON 后可直接粘贴到下方，也可以保存为 .json 后上传回填。</div>
+          </div>
+          <div class="field">
+            <label for="wearable">健康数据摘要</label>
+            <textarea id="wearable">{"period":"最近90天","avg_sleep_hours":6.5,"sleep_consistency":"不稳定","avg_daily_steps":6200,"hrv_trend":"持平","notes":"工作日活动少"}</textarea>
+          </div>
+          <button class="primary" type="submit">生成 30 天计划</button>
+          <div>
+            <div class="small-note">关键词标签</div>
+            <div class="tags" id="keywordTags"></div>
+          </div>
+          <div class="followup-card" id="followupCard">
+            <div>
+              <div class="small-note">精简回访问卷</div>
+              <strong id="followupTitle">按 14 天周期或身体不适触发</strong>
+            </div>
+            <div class="field">
+              <label for="followupWeight">体重/围度变化</label>
+              <input id="followupWeight" placeholder="可选，如体重 -1kg、腰围 -2cm">
+            </div>
+            <div class="followup-grid">
+              <div class="field">
+                <label for="followupCompletion">完成度自评</label>
+                <select id="followupCompletion">
+                  <option>几乎全做到</option>
+                  <option>一半左右</option>
+                  <option>大多没做到</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="followupFatigue">主观疲劳</label>
+                <select id="followupFatigue">
+                  <option>轻松</option>
+                  <option selected>适中</option>
+                  <option>吃力</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="followupPain">新增酸痛、不适或疼痛信号</label>
+              <textarea id="followupPain" placeholder="没有可留空；填写后会进入安全分支"></textarea>
+            </div>
+            <div class="followup-grid">
+              <div class="field">
+                <label for="followupGoalChanged">目标是否调整</label>
+                <select id="followupGoalChanged">
+                  <option value="false">不调整</option>
+                  <option value="true">调整</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="followupGoal">新目标</label>
+                <select id="followupGoal">
+                  <option>增肌</option>
+                  <option>减脂</option>
+                  <option>塑形</option>
+                  <option>体能提升</option>
+                  <option>康复</option>
+                  <option>健康维护</option>
+                </select>
+              </div>
+            </div>
+            <div class="followup-grid">
+              <div class="field">
+                <label for="followupSleepStress">睡眠/压力变化</label>
+                <select id="followupSleepStress">
+                  <option>变好</option>
+                  <option selected>无变化</option>
+                  <option>变差</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="followupDifficulty">计划难度反馈</label>
+                <select id="followupDifficulty">
+                  <option>太轻</option>
+                  <option selected>刚好</option>
+                  <option>太累</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="followupWearable">客观数据更新</label>
+              <textarea id="followupWearable" placeholder="可选，粘贴 WearableSummary JSON"></textarea>
+            </div>
+            <button class="secondary" type="button" id="submitFollowup">提交回访并更新画像</button>
+          </div>
+          <div class="native-card" id="notificationCard">
+            <strong>本地通知</strong>
+            <span class="small-note">Capacitor 打包后使用 Local Notifications；浏览器预览中会生成待排通知清单。</span>
+            <label class="toggle-row">总开关 <input id="notifyEnabled" type="checkbox"></label>
+            <label class="toggle-row">今日训练提醒 <input id="notifyWorkout" type="checkbox" checked></label>
+            <label class="toggle-row">沉默跳过提醒 <input id="notifySilent" type="checkbox" checked></label>
+            <label class="toggle-row">回访到期提醒 <input id="notifyFollowup" type="checkbox" checked></label>
+            <label class="toggle-row">周度调整播报 <input id="notifyWeekly" type="checkbox" checked></label>
+            <div class="engine-note" id="notificationStatus">未开启通知。</div>
+          </div>
+          <div class="health-box" id="followupBox"></div>
+        </form>
+      </section>
+
+      <section class="panel calendar-panel tab-panel active" id="calendarTab" data-tab-panel="calendar">
+        <div class="panel-head">
+          <div class="calendar-tools">
+            <button class="ghost" type="button" id="prevMonth" aria-label="上个月">‹</button>
+            <div class="month-title" id="monthTitle"></div>
+            <button class="ghost" type="button" id="nextMonth" aria-label="下个月">›</button>
+          </div>
+          <button class="secondary" type="button" id="resetDemo">重置演示</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="statDone">0</b><span>已完成</span></div>
+          <div class="stat"><b id="statDefer">0</b><span>主动搁置</span></div>
+          <div class="stat"><b id="statSilent">0</b><span>沉默跳过</span></div>
+          <div class="stat"><b id="statNext">0</b><span>下次回访天数</span></div>
+        </div>
+        <div class="weekdays">
+          <div class="weekday">一</div>
+          <div class="weekday">二</div>
+          <div class="weekday">三</div>
+          <div class="weekday">四</div>
+          <div class="weekday">五</div>
+          <div class="weekday">六</div>
+          <div class="weekday">日</div>
+        </div>
+        <div class="calendar" id="calendar"></div>
+      </section>
+
+      <section class="panel right-panel tab-panel" id="todayTab" data-tab-panel="today">
+        <div class="panel-head">
+          <h2 class="panel-title">训练执行</h2>
+          <span class="small-note">计时 / 分组追踪</span>
+        </div>
+        <div class="session" id="sessionPanel"></div>
+      </section>
+    </main>
+    <nav class="bottom-tabs" aria-label="底部导航">
+      <button class="tab-button active" type="button" data-tab="calendar" aria-label="日历首页">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        日历
+      </button>
+      <button class="tab-button" type="button" data-tab="today" aria-label="今日训练">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 5v14M18 5v14M6 12h12M3 9v6M21 9v6"/></svg>
+        今日
+      </button>
+      <button class="tab-button" type="button" data-tab="profile" aria-label="我的画像">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+        画像
+      </button>
+    </nav>
+  </div>
+
+  <dialog id="deferDialog">
+    <div class="dialog-body">
+      <h3>今天先搁置的原因</h3>
+      <div class="reason-grid" id="reasonGrid"></div>
+    </div>
+    <div class="dialog-actions">
+      <button class="ghost" type="button" id="closeDialog">取消</button>
+    </div>
+  </dialog>
+
+  <script>
+    const DAY = 24 * 60 * 60 * 1000;
+    const today = stripTime(new Date());
+    const storeKey = "fitness-agent-tool-v4";
+    const labels = ["推", "拉", "下肢", "核心", "有氧", "拉伸", "全身", "休息"];
+    const reasons = ["太累", "没时间", "不想练", "身体不适"];
+    const goalParams = {
+      "增肌": { setDelta: 1, reps: "6-12 次", rest: "60-90s", cardioBias: "低", durationFactor: 1 },
+      "减脂": { setDelta: 0, reps: "12-15 次", rest: "30-45s", cardioBias: "高", durationFactor: 1.1 },
+      "塑形": { setDelta: 0, reps: "10-15 次", rest: "45-60s", cardioBias: "中", durationFactor: 1 },
+      "体能提升": { setDelta: 0, reps: "间歇循环", rest: "按动作", cardioBias: "中高", durationFactor: 1.1 },
+      "康复": { setDelta: -1, reps: "低负荷，保留余力", rest: "充分", cardioBias: "低冲击", durationFactor: .85 },
+      "健康维护": { setDelta: 0, reps: "中等强度", rest: "60s", cardioBias: "中", durationFactor: .95 }
+    };
+    const injuryRules = [
+      { keys: ["膝"], muscles: ["大腿前侧", "臀", "膝", "小腿"], factor: .9, replacements: { "箱式深蹲": ["箱式半蹲", "6-8 次，保留余力"], "低冲击快走": ["低冲击快走", "鼻呼吸可持续，保留余力"] }, note: "膝部限制：深蹲降 ROM，避免跳跃和高冲击。" },
+      { keys: ["肩"], muscles: ["肩", "胸", "三头"], factor: .9, replacements: { "哑铃肩推": ["中立位哑铃推", "8-10 次，保留余力"], "跪姿俯卧撑": ["上斜俯卧撑", "8-12 次，保留余力"] }, note: "肩部限制：避免痛弧和大重量过头推。" },
+      { keys: ["腰", "下背"], muscles: ["下背", "臀", "核心", "腹"], factor: .88, replacements: { "哑铃罗马尼亚硬拉": ["徒手髋绞链练习", "8-10 次，保留余力"], "死虫": ["死虫", "每侧 6-8 次，保留余力"] }, note: "腰/下背限制：避免负重脊柱屈曲，优先核心稳定。" },
+      { keys: ["腕"], muscles: ["腕", "前臂"], factor: .92, replacements: { "侧桥": ["前臂侧桥", "每侧 20-30 秒，保留余力"], "跪姿俯卧撑": ["拳撑或把手俯卧撑", "8-10 次，保留余力"] }, note: "腕部限制：减少大重量抓握，支撑动作改前臂或把手。" },
+      { keys: ["踝"], muscles: ["踝", "小腿"], factor: .9, replacements: { "低冲击快走": ["固定车或原地低冲击踏步", "15-25 分钟，保留余力"] }, note: "踝部限制：避免弹跳和侧向冲击。" }
+    ];
+    const wearablePrompt = `请你作为健康数据整理助手，读取我提供的手表/健康 App 导出数据或截图摘要，整理最近 90 天的客观健康数据。请只输出一个合法 JSON，不要输出解释、Markdown 或多余文本。
+
+输出 schema 必须完全使用以下字段：
+{
+  "period": "最近90天",
+  "avg_resting_hr": null,
+  "avg_sleep_hours": null,
+  "sleep_consistency": "稳定 | 不稳定 | 数据不足",
+  "avg_daily_steps": null,
+  "logged_workouts": [
+    { "type": "", "freq_per_week": null, "avg_duration_min": null }
+  ],
+  "hrv_trend": "上升 | 下降 | 持平 | 数据不足",
+  "notes": ""
+}
+
+规则：
+1. 如果数据里没有某项，填 null 或“数据不足”，不要编造。
+2. sleep_consistency 根据入睡/起床时间、睡眠时长波动判断。
+3. logged_workouts 汇总近 90 天主要运动类型、每周频次、平均时长。
+4. notes 用一句话说明会影响训练计划的客观信号，例如睡眠不足、步数偏低、心率偏高、训练记录与自述不一致。
+5. 最终只返回 JSON。`;
+    const templates = {
+      "推": [
+        ["哑铃肩推", ["肩", "三头"], 3, "8-10 次", "https://www.youtube.com/results?search_query=%E5%93%91%E9%93%83+%E8%82%A9%E6%8E%A8+%E6%95%99%E7%A8%8B"],
+        ["跪姿俯卧撑", ["胸", "肩", "三头"], 3, "10-12 次", "https://www.youtube.com/results?search_query=%E4%BF%AF%E5%8D%A7%E6%92%91+%E5%88%9D%E5%AD%A6%E8%80%85+%E6%95%99%E7%A8%8B"]
+      ],
+      "拉": [
+        ["弹力带划船", ["背", "二头"], 3, "12 次", "https://www.youtube.com/results?search_query=%E5%BC%B9%E5%8A%9B%E5%B8%A6+%E5%88%92%E8%88%B9+%E6%95%99%E7%A8%8B"],
+        ["哑铃俯身划船", ["背", "二头"], 3, "10 次", "https://www.youtube.com/results?search_query=%E5%93%91%E9%93%83+%E4%BF%AF%E8%BA%AB%E5%88%92%E8%88%B9+%E6%95%99%E7%A8%8B"]
+      ],
+      "下肢": [
+        ["箱式深蹲", ["臀", "大腿前侧"], 3, "8-10 次", "https://www.youtube.com/results?search_query=%E7%AE%B1%E5%BC%8F%E6%B7%B1%E8%B9%B2+%E8%86%9D%E7%9B%96+%E6%95%99%E7%A8%8B"],
+        ["臀桥", ["臀", "大腿后侧"], 3, "12 次", "https://www.youtube.com/results?search_query=%E8%87%80%E6%A1%A5+%E6%95%99%E7%A8%8B"]
+      ],
+      "核心": [
+        ["死虫", ["腹", "下背"], 3, "每侧 8 次", "https://www.youtube.com/results?search_query=%E6%AD%BB%E8%99%AB+%E6%A0%B8%E5%BF%83+%E6%95%99%E7%A8%8B"],
+        ["侧桥", ["腹", "下背"], 2, "每侧 30 秒", "https://www.youtube.com/results?search_query=%E4%BE%A7%E6%A1%A5+%E6%95%99%E7%A8%8B"]
+      ],
+      "有氧": [
+        ["低冲击快走", ["心肺"], null, "20-30 分钟", "https://www.youtube.com/results?search_query=%E4%BD%8E%E5%86%B2%E5%87%BB+%E6%9C%89%E6%B0%A7+%E6%95%99%E7%A8%8B"]
+      ],
+      "拉伸": [
+        ["髋屈肌拉伸", ["髋", "大腿前侧"], null, "8-12 分钟", "https://www.youtube.com/results?search_query=%E9%AB%8B%E5%B1%88%E8%82%8C+%E6%8B%89%E4%BC%B8+%E6%95%99%E7%A8%8B"]
+      ],
+      "全身": [
+        ["哑铃罗马尼亚硬拉", ["臀", "大腿后侧", "背"], 2, "10 次", "https://www.youtube.com/results?search_query=%E5%93%91%E9%93%83+%E7%BD%97%E9%A9%AC%E5%B0%BC%E4%BA%9A%E7%A1%AC%E6%8B%89+%E6%95%99%E7%A8%8B"],
+        ["弹力带推拉组合", ["胸", "背", "肩"], 2, "12 次", "https://www.youtube.com/results?search_query=%E5%BC%B9%E5%8A%9B%E5%B8%A6+%E5%85%A8%E8%BA%AB+%E8%AE%AD%E7%BB%83"]
+      ],
+      "休息": []
+    };
+
+    let state = loadState();
+    let viewing = new Date(today.getFullYear(), today.getMonth(), 1);
+    let selectedDate = iso(today);
+    let timerId = null;
+    let remaining = 0;
+    let timerRunning = false;
+
+    document.getElementById("brandMascot").innerHTML = mascotSvg("计划中");
+    document.getElementById("profileForm").addEventListener("submit", event => {
+      event.preventDefault();
+      state.profile = readProfile();
+      state.plan = buildPlan(state.profile);
+      state.deferrals = [];
+      state.checks = {};
+      state.profileStartedAt = iso(today);
+      selectedDate = iso(today);
+      saveState();
+      render();
+    });
+    document.getElementById("prevMonth").addEventListener("click", () => {
+      viewing = new Date(viewing.getFullYear(), viewing.getMonth() - 1, 1);
+      renderCalendar();
+    });
+    document.getElementById("nextMonth").addEventListener("click", () => {
+      viewing = new Date(viewing.getFullYear(), viewing.getMonth() + 1, 1);
+      renderCalendar();
+    });
+    document.getElementById("resetDemo").addEventListener("click", () => {
+      localStorage.removeItem(storeKey);
+      state = seedState();
+      selectedDate = iso(today);
+      saveState();
+      render();
+    });
+    document.getElementById("closeDialog").addEventListener("click", () => {
+      document.getElementById("deferDialog").close();
+    });
+    document.getElementById("copyWearablePrompt").addEventListener("click", async () => {
+      const promptBox = document.getElementById("wearablePrompt");
+      const status = document.getElementById("uploadStatus");
+      try {
+        await navigator.clipboard.writeText(promptBox.value);
+        status.textContent = "提示词已复制。把它发给你的 AI，并附上手表导出数据或截图摘要。";
+      } catch {
+        promptBox.focus();
+        promptBox.select();
+        status.textContent = "浏览器限制了自动复制，请手动复制选中的提示词。";
+      }
+    });
+    document.getElementById("wearableUpload").addEventListener("change", event => {
+      const file = event.target.files?.[0];
+      const status = document.getElementById("uploadStatus");
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || ""));
+          document.getElementById("wearable").value = JSON.stringify(parsed, null, 2);
+          status.textContent = "已回填健康数据摘要。确认无误后点击生成 30 天计划。";
+        } catch {
+          status.textContent = "上传内容不是合法 JSON，请让 AI 只输出 JSON 后再上传。";
+        }
+      };
+      reader.readAsText(file, "utf-8");
+    });
+    document.getElementById("submitFollowup").addEventListener("click", () => {
+      submitFollowup();
+    });
+    document.querySelectorAll(".tab-button").forEach(button => {
+      button.addEventListener("click", () => setActiveTab(button.dataset.tab));
+    });
+    document.getElementById("importNativeHealth").addEventListener("click", () => {
+      importNativeHealthData();
+    });
+    ["notifyEnabled", "notifyWorkout", "notifySilent", "notifyFollowup", "notifyWeekly"].forEach(id => {
+      document.getElementById(id).addEventListener("change", () => {
+        readNotificationPrefs();
+        refreshNotifications("设置已更新");
+        saveState();
+        renderNotifications();
+      });
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden" && timerRunning) state.timerBackgroundAt = Date.now();
+      if (document.visibilityState === "visible" && timerRunning && state.timerBackgroundAt) {
+        const elapsed = Math.floor((Date.now() - state.timerBackgroundAt) / 1000);
+        remaining = Math.max(0, remaining - elapsed);
+        state.timerBackgroundAt = null;
+        const timerNode = document.getElementById("timerTime");
+        if (timerNode) timerNode.textContent = formatTime(remaining);
+      }
+      if (document.visibilityState === "visible") {
+        if (applyWeeklyAdjustmentIfDue()) saveState();
+        renderNotifications();
+      }
+    });
+
+    function stripTime(date) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    function iso(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return y + "-" + m + "-" + d;
+    }
+
+    function parseIso(value) {
+      const [y, m, d] = value.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem(storeKey);
+      if (!raw) return seedState();
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed.plan?.length) return seedState();
+        return normalizeState(parsed);
+      } catch {
+        return seedState();
+      }
+    }
+
+    function normalizeState(next) {
+      next.followups ||= [];
+      next.weeklyAdjustments ||= [];
+      next.notificationPrefs ||= { workout: true, silent: true, followup: true, weekly: true };
+      next.notificationQueue ||= [];
+      next.notifications_enabled = Boolean(next.notifications_enabled);
+      next.activeTab ||= "calendar";
+      next.profile ||= {};
+      next.profile.wearable_source ||= next.profile.wearable_summary ? "manual" : "none";
+      next.profile.program_start ||= next.profileStartedAt || iso(today);
+      next.plan?.forEach(item => {
+        if (item.display_type !== "休息" && typeof item.intensity_factor !== "number") item.intensity_factor = 1;
+      });
+      return next;
+    }
+
+    function seedState() {
+      const profile = {
+        keywords: [],
+        constraints: { injuries: ["膝盖旧伤"], medical_notes: "避免高冲击深蹲" },
+        availability: { days_per_week: 4, session_minutes: 45 },
+        equipment: ["哑铃", "弹力带", "瑜伽垫"],
+        goal: "增肌",
+        level: "长期不锻炼",
+        lifestyle: "久坐职业，睡眠偏少，压力中等，偏好家庭训练。",
+        wearable_summary: { period: "最近90天", avg_sleep_hours: 6.5, sleep_consistency: "不稳定", avg_daily_steps: 6200, logged_workouts: [{ type: "力量训练", freq_per_week: 1, avg_duration_min: 35 }], hrv_trend: "持平", notes: "工作日活动少" },
+        wearable_source: "manual",
+        program_start: iso(today),
+        updated_at: today.toISOString()
+      };
+      profile.keywords = makeKeywords(profile);
+      const seeded = {
+        profile,
+        profileStartedAt: iso(today),
+        plan: buildPlan(profile),
+        deferrals: [],
+        checks: {},
+        followups: [],
+        followupDueReason: null,
+        weeklyAdjustments: [],
+        lastWeeklyAdjustment: null,
+        notifications_enabled: false,
+        notificationPrefs: { workout: true, silent: true, followup: true, weekly: true },
+        notificationQueue: [],
+        activeTab: "calendar"
+      };
+      const pastTraining = seeded.plan.filter(item => parseIso(item.date) < today && item.display_type !== "休息");
+      if (pastTraining[0]) pastTraining[0].status = "已完成";
+      if (pastTraining[1]) {
+        pastTraining[1].status = "已搁置";
+        seeded.deferrals.push({ date: pastTraining[1].date, workout_type: pastTraining[1].display_type, exercises_snapshot: pastTraining[1].exercises, reason: "太累" });
+      }
+      return seeded;
+    }
+
+    function saveState() {
+      localStorage.setItem(storeKey, JSON.stringify(state));
+    }
+
+    function readProfile() {
+      let wearable = null;
+      try {
+        wearable = JSON.parse(document.getElementById("wearable").value || "null");
+      } catch {
+        wearable = { notes: document.getElementById("wearable").value };
+      }
+      const profile = {
+        keywords: [],
+        constraints: {
+          injuries: splitInput(document.getElementById("injuries").value),
+          medical_notes: ""
+        },
+        availability: {
+          days_per_week: clamp(Number(document.getElementById("days").value || 4), 1, 6),
+          session_minutes: clamp(Number(document.getElementById("minutes").value || 45), 15, 120)
+        },
+        equipment: splitInput(document.getElementById("equipment").value),
+        goal: document.getElementById("goal").value,
+        level: document.getElementById("level").value,
+        lifestyle: document.getElementById("lifestyle").value,
+        wearable_summary: wearable,
+        wearable_source: state.profile?.wearable_source || "manual",
+        program_start: state.profile?.program_start || iso(today),
+        updated_at: new Date().toISOString()
+      };
+      profile.keywords = makeKeywords(profile);
+      return profile;
+    }
+
+    function splitInput(value) {
+      return value.split(/[,，、\s]+/).map(item => item.trim()).filter(Boolean);
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function makeKeywords(profile) {
+      const tags = [`#${profile.goal}`, `#单次≤${profile.availability.session_minutes}min`];
+      const signals = wearableSignals(profile);
+      if (profile.lifestyle.includes("久坐")) tags.push("#久坐职业");
+      if (profile.lifestyle.includes("睡眠") || signals.sleepShort) tags.push("#睡眠不足需注意恢复");
+      if (signals.frequencyGap) tags.push("#手表频率低于自述需保守编排");
+      if (signals.hrvDown) tags.push("#HRV下降当周强度上限-10%");
+      if (profile.constraints.injuries.length) tags.push(`#${profile.constraints.injuries.join("+")}需规避`);
+      if (profile.equipment.length) tags.push(`#家庭器械:${profile.equipment.join("+")}`);
+      if (isFirstWeekDeload(profile, today)) tags.push("#第一周强度降20%");
+      if (matchedInjuryRules(profile).length === 0 && profile.constraints.injuries.length) tags.push("#未知伤病本周强度保守");
+      return [...new Set(tags)];
+    }
+
+    function buildPlan(profile) {
+      const days = profile.availability.days_per_week;
+      const strategy = strategyForProfile(profile);
+      const trainingSlots = preferredTrainingSlots(days);
+      const lastTrained = {};
+      const plan = [];
+      let cursor = 0;
+      for (let i = -5; i < 30; i += 1) {
+        const date = new Date(today.getTime() + i * DAY);
+        const weekSlot = ((date.getDay() + 6) % 7);
+        let type = "休息";
+        if (trainingSlots.includes(weekSlot)) {
+          const preferred = strategy[cursor++ % strategy.length];
+          type = chooseRecoveredType(preferred, strategy, date, lastTrained, profile);
+        }
+        const intensity = dailyIntensityFactor(date, type, profile);
+        const exercises = makeExercises(type, profile, intensity);
+        if (type !== "休息") markMuscles(lastTrained, exercises, date);
+        plan.push({
+          date: iso(date),
+          display_type: type,
+          mode: ["有氧", "拉伸"].includes(type) ? "duration" : "sets",
+          intensity_factor: intensity,
+          exercises,
+          status: type === "休息" ? "休息日" : "未开始"
+        });
+      }
+      return plan;
+    }
+
+    function strategyForProfile(profile) {
+      const days = profile.availability.days_per_week;
+      if (profile.goal === "减脂") return days <= 3 ? ["全身", "有氧", "全身"] : ["推", "有氧", "下肢", "拉", "核心", "有氧"];
+      if (profile.goal === "康复") return ["拉伸", "核心", "有氧", "全身"];
+      if (profile.goal === "体能提升") return days <= 3 ? ["全身", "有氧", "核心"] : ["推", "拉", "有氧", "下肢", "核心", "全身"];
+      if (days <= 3) return ["全身", "拉伸", "全身"];
+      if (days === 4) return ["推", "下肢", "拉", "核心"];
+      return ["推", "拉", "下肢", "核心", "有氧", "拉伸"];
+    }
+
+    function preferredTrainingSlots(days) {
+      const weekendFirst = {
+        1: [5],
+        2: [5, 6],
+        3: [2, 5, 6],
+        4: [1, 3, 5, 6],
+        5: [0, 1, 3, 5, 6],
+        6: [0, 1, 2, 3, 5, 6]
+      };
+      return weekendFirst[clamp(days, 1, 6)] || weekendFirst[4];
+    }
+
+    function chooseRecoveredType(preferred, strategy, date, lastTrained, profile) {
+      const fallbacks = [preferred, ...strategy, "核心", "有氧", "拉伸", "休息"];
+      for (const type of [...new Set(fallbacks)]) {
+        if (type === "休息") return type;
+        const muscles = templateMuscles(type, profile);
+        const conflicts = muscles.some(muscle => lastTrained[muscle] && date - lastTrained[muscle] < 2 * DAY);
+        if (!conflicts) return type;
+      }
+      return "休息";
+    }
+
+    function templateMuscles(type, profile) {
+      return [...new Set(makeExercises(type, profile, 1, true).flatMap(exercise => exercise.muscle_groups || []))];
+    }
+
+    function markMuscles(lastTrained, exercises, date) {
+      exercises.flatMap(exercise => exercise.muscle_groups || []).forEach(muscle => {
+        lastTrained[muscle] = date;
+      });
+    }
+
+    function dailyIntensityFactor(date, type, profile) {
+      if (type === "休息") return 1;
+      let factor = 1;
+      const signals = wearableSignals(profile);
+      if (isFirstWeekDeload(profile, date)) factor *= .8;
+      if (signals.frequencyGap && date - parseIso(profile.program_start || iso(today)) < 14 * DAY) factor *= .9;
+      if (signals.hrvDown) factor *= .9;
+      const rules = matchedInjuryRules(profile);
+      if (rules.length) factor *= Math.min(...rules.map(rule => rule.factor));
+      else if (profile.constraints.injuries.length) factor *= .85;
+      return Math.max(.65, Math.min(1, Number(factor.toFixed(2))));
+    }
+
+    function isFirstWeekDeload(profile, date) {
+      const start = parseIso(profile.program_start || iso(today));
+      return ["长期不锻炼", "偶尔锻炼", "新手"].includes(profile.level) && date - start < 7 * DAY;
+    }
+
+    function wearableSignals(profile) {
+      const wearable = profile.wearable_summary || {};
+      const recordedFreq = Array.isArray(wearable.logged_workouts) ? wearable.logged_workouts.reduce((sum, item) => sum + Number(item.freq_per_week || 0), 0) : 0;
+      return {
+        frequencyGap: recordedFreq > 0 && profile.availability.days_per_week > recordedFreq + 1,
+        sleepShort: Number(wearable.avg_sleep_hours || 0) > 0 && Number(wearable.avg_sleep_hours) < 6.5,
+        hrvDown: String(wearable.hrv_trend || "").includes("下降")
+      };
+    }
+
+    function matchedInjuryRules(profile) {
+      const text = (profile.constraints.injuries || []).join(" ");
+      return injuryRules.filter(rule => rule.keys.some(key => text.includes(key)));
+    }
+
+    function makeExercises(type, profile, intensity = 1, dryRun = false) {
+      const params = goalParams[profile.goal] || goalParams["健康维护"];
+      const rules = matchedInjuryRules(profile);
+      let base = (templates[type] || []).map(([name, muscle_groups, sets, reps_or_duration, tutorial_url]) => {
+        let nextName = name;
+        let nextReps = tuneReps(reps_or_duration, params, type);
+        for (const rule of rules) {
+          const replacement = rule.replacements[name];
+          const hitsMuscle = muscle_groups.some(muscle => rule.muscles.includes(muscle));
+          if (replacement || hitsMuscle) {
+            nextName = replacement?.[0] || nextName;
+            nextReps = replacement?.[1] || addReserveCue(nextReps);
+          }
+        }
+        const tunedSets = sets == null ? null : Math.max(1, sets + params.setDelta - (intensity < .9 ? 1 : 0));
+        return { name: nextName, muscle_groups, sets: tunedSets, reps_or_duration: nextReps, tutorial_url };
+      });
+      if (!dryRun && rules.length && base.length) {
+        base[0].reps_or_duration = addReserveCue(base[0].reps_or_duration);
+      }
+      return base;
+    }
+
+    function tuneReps(value, params, type) {
+      if (["有氧", "拉伸"].includes(type)) return value;
+      if (String(value).includes("秒")) return value;
+      return params.reps;
+    }
+
+    function addReserveCue(value) {
+      return String(value).includes("保留余力") ? value : `${value}，保留余力`;
+    }
+
+    function render() {
+      fillProfile();
+      if (applyWeeklyAdjustmentIfDue()) saveState();
+      renderTags();
+      renderFollowup();
+      renderCalendar();
+      renderSession();
+      renderStats();
+      renderNotifications();
+      setActiveTab(state.activeTab || "calendar", false);
+    }
+
+    function fillProfile() {
+      const p = state.profile;
+      document.getElementById("goal").value = p.goal;
+      document.getElementById("level").value = p.level;
+      document.getElementById("days").value = p.availability.days_per_week;
+      document.getElementById("minutes").value = p.availability.session_minutes;
+      document.getElementById("equipment").value = p.equipment.join(", ");
+      document.getElementById("injuries").value = p.constraints.injuries.join(", ");
+      document.getElementById("lifestyle").value = p.lifestyle;
+      document.getElementById("wearablePrompt").value = wearablePrompt;
+      document.getElementById("wearable").value = JSON.stringify(p.wearable_summary, null, 2);
+      document.getElementById("nativeHealthStatus").textContent = wearableSourceText(p.wearable_source, p.wearable_summary);
+      document.getElementById("notifyEnabled").checked = Boolean(state.notifications_enabled);
+      document.getElementById("notifyWorkout").checked = state.notificationPrefs?.workout !== false;
+      document.getElementById("notifySilent").checked = state.notificationPrefs?.silent !== false;
+      document.getElementById("notifyFollowup").checked = state.notificationPrefs?.followup !== false;
+      document.getElementById("notifyWeekly").checked = state.notificationPrefs?.weekly !== false;
+    }
+
+    function setActiveTab(tab, persist = true) {
+      const next = ["calendar", "today", "profile"].includes(tab) ? tab : "calendar";
+      document.querySelectorAll("[data-tab-panel]").forEach(panel => {
+        panel.classList.toggle("active", panel.dataset.tabPanel === next);
+      });
+      document.querySelectorAll(".tab-button").forEach(button => {
+        button.classList.toggle("active", button.dataset.tab === next);
+      });
+      if (persist) {
+        state.activeTab = next;
+        saveState();
+      }
+    }
+
+    async function importNativeHealthData() {
+      const status = document.getElementById("nativeHealthStatus");
+      status.textContent = "正在请求健康数据授权...";
+      let summary = null;
+      let source = "manual";
+      try {
+        const plugins = window.Capacitor?.Plugins || {};
+        const health = plugins.HealthKit || plugins.HealthConnect || plugins.Health;
+        if (health?.requestAuthorization && health?.querySummary) {
+          await health.requestAuthorization({ days: 90 });
+          summary = await health.querySummary({ days: 90 });
+          source = plugins.HealthKit ? "healthkit" : "health_connect";
+        }
+      } catch (error) {
+        status.textContent = "原生健康授权失败：" + (error?.message || "未知错误") + "。可继续使用降级通道。";
+      }
+      if (!summary) {
+        summary = mockNativeHealthSummary();
+        source = "manual";
+        status.textContent = "当前是浏览器预览，已填入本地模拟摘要；Capacitor 打包后会改走 HealthKit / Health Connect。";
+      } else {
+        status.textContent = "已通过 " + (source === "healthkit" ? "HealthKit" : "Health Connect") + " 导入近 90 天摘要。";
+      }
+      state.profile.wearable_summary = summary;
+      state.profile.wearable_source = source;
+      state.profile.keywords = makeKeywords(state.profile);
+      document.getElementById("wearable").value = JSON.stringify(summary, null, 2);
+      saveState();
+      renderTags();
+      renderFollowup();
+    }
+
+    function mockNativeHealthSummary() {
+      return {
+        period: "最近90天",
+        avg_resting_hr: 62,
+        avg_sleep_hours: 6.4,
+        sleep_consistency: "不稳定",
+        avg_daily_steps: 6800,
+        logged_workouts: [{ type: "力量训练", freq_per_week: 1, avg_duration_min: 36 }],
+        hrv_trend: "持平",
+        notes: "浏览器预览模拟数据；打包后由原生健康插件在本地归约。"
+      };
+    }
+
+    function wearableSourceText(source, summary) {
+      const label = source === "healthkit" ? "HealthKit" : source === "health_connect" ? "Health Connect" : source === "manual" ? "手动/降级通道" : "未导入";
+      return label + " · " + (summary?.period || "暂无摘要") + " · 原始健康数据不上传，只保存摘要。";
+    }
+
+    function readNotificationPrefs() {
+      state.notifications_enabled = document.getElementById("notifyEnabled").checked;
+      state.notificationPrefs = {
+        workout: document.getElementById("notifyWorkout").checked,
+        silent: document.getElementById("notifySilent").checked,
+        followup: document.getElementById("notifyFollowup").checked,
+        weekly: document.getElementById("notifyWeekly").checked
+      };
+    }
+
+    function refreshNotifications(reason = "已刷新") {
+      if (!state.notifications_enabled) {
+        state.notificationQueue = [];
+        return;
+      }
+      const queue = [];
+      const prefs = state.notificationPrefs || {};
+      const upcomingTraining = state.plan.filter(item => parseIso(item.date) >= today && item.display_type !== "休息").slice(0, 7);
+      if (prefs.workout) upcomingTraining.forEach(item => queue.push({ type: "今日训练提醒", date: item.date, target: "today", body: item.display_type + " 训练已准备好" }));
+      if (prefs.silent) upcomingTraining.slice(0, 3).forEach(item => queue.push({ type: "沉默跳过提醒", date: item.date, target: "today", body: "今天还没开始，要打卡或调整吗？" }));
+      if (prefs.followup) queue.push({ type: "回访到期提醒", date: nextFollowupDate(), target: "profile", body: "该做一次精简回访了" });
+      if (prefs.weekly) queue.push({ type: "周度调整播报", date: iso(nextWeeklyBoundary(today)), target: "profile", body: "下周计划已按本周反馈调整" });
+      state.notificationQueue = queue;
+      scheduleNativeNotifications(queue, reason);
+    }
+
+    async function scheduleNativeNotifications(queue, reason) {
+      const localNotifications = window.Capacitor?.Plugins?.LocalNotifications;
+      if (!localNotifications?.schedule) return;
+      try {
+        await localNotifications.requestPermissions?.();
+        await localNotifications.schedule({ notifications: queue.map((item, index) => ({ id: index + 1, title: item.type, body: item.body, schedule: { at: new Date(item.date + "T20:30:00") }, extra: { target: item.target } })) });
+      } catch {
+        state.notificationQueueNote = reason + "；原生通知排程失败，保留本地清单。";
+      }
+    }
+
+    function renderNotifications() {
+      const node = document.getElementById("notificationStatus");
+      if (!node) return;
+      if (!state.notifications_enabled) {
+        node.textContent = "未开启通知。";
+        return;
+      }
+      const count = state.notificationQueue?.length || 0;
+      node.textContent = count + " 条通知待排程：今日训练、沉默跳过、回访到期、周度播报。" + (state.notificationQueueNote || "");
+    }
+
+    function nextFollowupDate() {
+      const start = parseIso(state.profile.program_start || state.profileStartedAt || iso(today));
+      const daysSince = Math.max(0, Math.floor((today - start) / DAY));
+      const daysToAdd = 14 - (daysSince % 14 || 14);
+      return iso(new Date(today.getTime() + daysToAdd * DAY));
+    }
+
+    function renderTags() {
+      document.getElementById("keywordTags").innerHTML = state.profile.keywords.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
+    }
+
+    function renderFollowup() {
+      const started = parseIso(state.profileStartedAt);
+      const daysSince = Math.max(0, Math.floor((today - started) / DAY));
+      const cycleDay = daysSince % 14;
+      const remainingDays = cycleDay === 0 && daysSince > 0 ? 0 : 14 - cycleDay;
+      const wearable = state.profile.wearable_summary || {};
+      const dueText = state.followupDueReason ? `<b>已提前触发：${state.followupDueReason}</b><br>` : "";
+      document.getElementById("followupTitle").textContent = state.followupDueReason ? `已因${state.followupDueReason}提前触发` : `距离下次回访 ${remainingDays} 天`;
+      document.getElementById("followupBox").innerHTML = `
+        <b>回访节奏</b><br>
+        ${dueText}固定每 14 天触发；距离下次精简回访还有 <b>${remainingDays}</b> 天。<br>
+        健康摘要：睡眠 ${wearable.avg_sleep_hours ?? "未填"}h，步数 ${wearable.avg_daily_steps ?? "未填"}，HRV ${wearable.hrv_trend ?? "未填"}。
+      `;
+      document.getElementById("statNext").textContent = remainingDays;
+    }
+
+    function renderCalendar() {
+      document.getElementById("monthTitle").textContent = `${viewing.getFullYear()}年${viewing.getMonth() + 1}月`;
+      const first = new Date(viewing.getFullYear(), viewing.getMonth(), 1);
+      const startOffset = (first.getDay() + 6) % 7;
+      const start = new Date(first.getTime() - startOffset * DAY);
+      const cells = [];
+      for (let i = 0; i < 42; i += 1) {
+        const date = new Date(start.getTime() + i * DAY);
+        const key = iso(date);
+        const item = state.plan.find(day => day.date === key);
+        cells.push(dayCell(date, item));
+      }
+      document.getElementById("calendar").innerHTML = cells.join("");
+      document.querySelectorAll(".day").forEach(button => {
+        button.addEventListener("click", () => {
+          selectedDate = button.dataset.date;
+          renderCalendar();
+          renderSession();
+        });
+      });
+      renderStats();
+    }
+
+    function dayCell(date, item) {
+      const key = iso(date);
+      const currentMonth = date.getMonth() === viewing.getMonth();
+      const classes = ["day"];
+      if (!currentMonth) classes.push("other");
+      if (key === selectedDate) classes.push("selected");
+      if (key === iso(today)) classes.push("today");
+      const visual = visualStatus(item, date);
+      classes.push(visual.className);
+      const type = item?.display_type || "休息";
+      return `
+        <button class="${classes.join(" ")}" type="button" data-date="${key}" aria-label="${key} ${type} ${visual.text}">
+          <span class="day-number"><span>${date.getDate()}</span>${key === iso(today) ? '<span class="today-mark">今天</span>' : ""}</span>
+          ${mascotSvg(type)}
+          <span class="day-label">${type}</span>
+          ${visual.badge}
+        </button>
+      `;
+    }
+
+    function visualStatus(item, date) {
+      if (!item) return { className: "rest", text: "无计划", badge: "" };
+      if (item.status === "已完成") return { className: "completed", text: "已完成", badge: badgeSvg("done") };
+      if (item.status === "已搁置") return { className: "deferred", text: "已搁置", badge: badgeSvg("defer") };
+      if (item.status === "休息日") return { className: "rest", text: "休息日", badge: "" };
+      if (date < today) return { className: "silent", text: "沉默跳过", badge: badgeSvg("warn") };
+      if (date > today) return { className: "future", text: "计划中", badge: "" };
+      return { className: "", text: "未开始", badge: "" };
+    }
+
+    function renderStats() {
+      const done = state.plan.filter(item => item.status === "已完成").length;
+      const deferred = state.plan.filter(item => item.status === "已搁置").length;
+      const silent = state.plan.filter(item => item.status === "未开始" && parseIso(item.date) < today && item.display_type !== "休息").length;
+      document.getElementById("statDone").textContent = done;
+      document.getElementById("statDefer").textContent = deferred;
+      document.getElementById("statSilent").textContent = silent;
+    }
+
+    function renderSession() {
+      clearTimer();
+      const item = state.plan.find(day => day.date === selectedDate);
+      const panel = document.getElementById("sessionPanel");
+      if (!item) {
+        panel.innerHTML = `<div class="empty">这一天还没有生成计划。可以先更新用户画像并生成 30 天计划。</div>${adjustmentHtml()}`;
+        return;
+      }
+      const selected = parseIso(selectedDate);
+      const title = `${selected.getMonth() + 1}月${selected.getDate()}日 · ${item.display_type}`;
+      const statusText = visualStatus(item, selected).text;
+      const body = item.display_type === "休息" ? restHtml() : item.mode === "duration" ? durationHtml(item) : setsHtml(item);
+      panel.innerHTML = `
+        <div class="selected-card">
+          ${mascotSvg(item.display_type)}
+          <div>
+            <h3>${title}</h3>
+            <p>${statusText} · ${item.mode === "duration" ? "计时训练" : "分组训练"} · 预计 ${effectiveSessionMinutes(item)} 分钟 · 强度系数 ${item.intensity_factor ?? 1}</p>
+          </div>
+        </div>
+        ${body}
+        ${actionHtml(item)}
+        ${adjustmentHtml()}
+      `;
+      bindSessionActions(item);
+    }
+
+    function restHtml() {
+      return `<div class="empty">今天是恢复日。保持轻量活动、补水和睡眠，不安排高强度训练。</div>`;
+    }
+
+    function effectiveSessionMinutes(item) {
+      return item.session_minutes || state.profile.availability.session_minutes;
+    }
+
+    function durationHtml(item) {
+      remaining = Math.max(5, Math.min(30, Math.round(effectiveSessionMinutes(item) * .55))) * 60;
+      return `
+        <div class="timer">
+          <div>
+            <div class="small-note">倒计时</div>
+            <div class="timer-time" id="timerTime">${formatTime(remaining)}</div>
+          </div>
+          <button class="secondary" type="button" id="timerToggle">开始</button>
+        </div>
+        <div class="exercise-list">${exerciseCards(item)}</div>
+      `;
+    }
+
+    function setsHtml(item) {
+      return `<div class="exercise-list">${exerciseCards(item)}</div>`;
+    }
+
+    function exerciseCards(item) {
+      return item.exercises.map((exercise, exerciseIndex) => {
+        const checks = state.checks[item.date]?.[exerciseIndex] || [];
+        const setButtons = exercise.sets
+          ? `<div class="sets">${Array.from({ length: exercise.sets }, (_, setIndex) => `<button class="set-check ${checks[setIndex] ? "active" : ""}" type="button" data-exercise="${exerciseIndex}" data-set="${setIndex}">第${setIndex + 1}组</button>`).join("")}</div>`
+          : "";
+        return `
+          <article class="exercise">
+            <div class="exercise-head">
+              <div>
+                <h4>${escapeHtml(exercise.name)}</h4>
+                <div class="exercise-meta">${escapeHtml(exercise.reps_or_duration)} · ${exercise.muscle_groups.join(" / ")} · 组间 ${goalParams[state.profile.goal]?.rest || "60s"}</div>
+              </div>
+              <a href="${exercise.tutorial_url}" target="_blank" rel="noreferrer">教程</a>
+            </div>
+            ${setButtons}
+          </article>
+        `;
+      }).join("");
+    }
+
+    function actionHtml(item) {
+      if (item.display_type === "休息") return "";
+      return `
+        <div class="actions">
+          <button class="primary" type="button" id="completeDay">完成打卡</button>
+          <button class="danger" type="button" id="deferDay">太累了，明天再说吧</button>
+        </div>
+      `;
+    }
+
+    function bindSessionActions(item) {
+      document.querySelectorAll(".set-check").forEach(button => {
+        button.addEventListener("click", () => {
+          const exercise = Number(button.dataset.exercise);
+          const set = Number(button.dataset.set);
+          state.checks[item.date] ||= {};
+          state.checks[item.date][exercise] ||= [];
+          state.checks[item.date][exercise][set] = !state.checks[item.date][exercise][set];
+          if (allSetsDone(item)) item.status = "已完成";
+          saveState();
+          renderSession();
+          renderCalendar();
+        });
+      });
+      document.getElementById("completeDay")?.addEventListener("click", () => {
+        item.status = "已完成";
+        saveState();
+        render();
+      });
+      document.getElementById("deferDay")?.addEventListener("click", () => {
+        openDeferralDialog(item);
+      });
+      document.getElementById("timerToggle")?.addEventListener("click", event => {
+        timerRunning = !timerRunning;
+        event.currentTarget.textContent = timerRunning ? "暂停" : "继续";
+        if (timerRunning) {
+          timerId = window.setInterval(() => {
+            remaining -= 1;
+            document.getElementById("timerTime").textContent = formatTime(remaining);
+            if (remaining <= 0) {
+              item.status = "已完成";
+              saveState();
+              render();
+            }
+          }, 1000);
+        } else {
+          clearInterval(timerId);
+        }
+      });
+    }
+
+    function allSetsDone(item) {
+      return item.exercises.every((exercise, exerciseIndex) => {
+        if (!exercise.sets) return true;
+        return Array.from({ length: exercise.sets }, (_, setIndex) => state.checks[item.date]?.[exerciseIndex]?.[setIndex]).every(Boolean);
+      });
+    }
+
+    function openDeferralDialog(item) {
+      const grid = document.getElementById("reasonGrid");
+      grid.innerHTML = reasons.map(reason => `<button class="secondary" type="button" data-reason="${reason}">${reason}</button>`).join("");
+      grid.querySelectorAll("button").forEach(button => {
+        button.addEventListener("click", () => {
+          item.status = "已搁置";
+          state.deferrals.push({
+            date: item.date,
+            workout_type: item.display_type,
+            exercises_snapshot: item.exercises,
+            reason: button.dataset.reason
+          });
+          if (button.dataset.reason === "身体不适") state.followupDueReason = "身体不适";
+          applyWeeklyAdjustmentIfDue();
+          saveState();
+          document.getElementById("deferDialog").close();
+          render();
+        });
+      });
+      document.getElementById("deferDialog").showModal();
+    }
+
+    function adjustmentHtml() {
+      const summary = weeklySummary();
+      const last = state.weeklyAdjustments?.[state.weeklyAdjustments.length - 1];
+      let recommendation = "本周行为数据不足，保持当前频次，并优先观察完成率。";
+      if (summary.silent >= 2) recommendation = "沉默跳过偏高：判为参与度问题，输出提醒，不降强度。";
+      else if (summary.topReason === "太累") recommendation = "主要原因是太累：下周同类型强度已按规则下调。";
+      else if (summary.topReason === "没时间") recommendation = "主要原因是没时间：下周单次时长会缩短一档。";
+      else if (summary.topReason === "不想练") recommendation = "主要原因是不想练：若连续同类型被跳过，下周会替换主动作或调整顺序。";
+      else if (summary.topReason === "身体不适") recommendation = "出现身体不适：已触发精简回访，等待确认后再调整。";
+      return `
+        <section class="adjustment">
+          <h3>周度调整引擎</h3>
+          <p>本周主动搁置 ${summary.weekDefers.length} 次，沉默跳过 ${summary.silent} 次。${recommendation}</p>
+          <div class="engine-note">${last ? escapeHtml(last.message) : "到周六 00:00 会自动改写下周计划；静态原型会在打开页面时检查是否到达触发点。"}</div>
+        </section>
+      `;
+    }
+
+    function weeklySummary() {
+      const weekStart = new Date(today.getTime() - ((today.getDay() + 6) % 7) * DAY);
+      const weekPlan = state.plan.filter(item => parseIso(item.date) >= weekStart && parseIso(item.date) <= today);
+      const weekDefers = state.deferrals.filter(item => parseIso(item.date) >= weekStart && parseIso(item.date) <= today);
+      const silent = weekPlan.filter(item => item.status === "未开始" && parseIso(item.date) < today && item.display_type !== "休息").length;
+      const reasonCounts = weekDefers.reduce((acc, item) => {
+        acc[item.reason] = (acc[item.reason] || 0) + 1;
+        return acc;
+      }, {});
+      const typeCounts = weekDefers.reduce((acc, item) => {
+        acc[item.workout_type] = (acc[item.workout_type] || 0) + 1;
+        return acc;
+      }, {});
+      return {
+        weekStart,
+        weekPlan,
+        weekDefers,
+        silent,
+        topReason: Object.entries(reasonCounts).sort((a, b) => b[1] - a[1])[0]?.[0],
+        topType: Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0]
+      };
+    }
+
+    function applyWeeklyAdjustmentIfDue(force = false) {
+      const boundary = force ? today : latestPassedWeeklyBoundary(today);
+      if (!boundary) return false;
+      const boundaryKey = iso(boundary);
+      const last = state.lastWeeklyAdjustment ? parseIso(state.lastWeeklyAdjustment) : null;
+      if (!force && last && last >= boundary) return false;
+      const programStart = parseIso(state.profile.program_start || state.profileStartedAt || iso(today));
+      if (!force && boundary < programStart) return false;
+      const summary = weeklySummaryForBoundary(boundary);
+      const nextWeekStart = new Date(boundary.getTime());
+      const nextWeekEnd = new Date(nextWeekStart.getTime() + 6 * DAY);
+      const nextWeek = state.plan.filter(item => parseIso(item.date) >= nextWeekStart && parseIso(item.date) <= nextWeekEnd);
+      let message = "周度调整已补算：数据不足，暂不改写下周计划。";
+      if (summary.topReason === "身体不适") {
+        state.followupDueReason = "身体不适";
+        message = "身体不适优先进入回访安全分支，下周计划暂不加量。";
+      } else if (summary.silent >= 2) {
+        if (state.notifications_enabled) refreshNotifications("沉默跳过提醒已加强");
+        message = "沉默跳过偏高，标记为参与度问题：加强提醒，不降强度。";
+      } else if (summary.topReason === "太累") {
+        nextWeek.filter(item => item.display_type === summary.topType).forEach(item => {
+          item.intensity_factor = Math.max(.65, Number(((item.intensity_factor ?? 1) - .1).toFixed(2)));
+          item.exercises.forEach(exercise => { if (exercise.sets) exercise.sets = Math.max(1, exercise.sets - 1); });
+        });
+        message = `跨周补算完成：下周 ${summary.topType || "对应类型"} 强度系数已下调 0.1，并尽量降 1 组。`;
+      } else if (summary.topReason === "没时间") {
+        nextWeek.forEach(item => { if (item.display_type !== "休息") item.session_minutes = Math.max(20, (item.session_minutes || state.profile.availability.session_minutes) - 10); });
+        message = "跨周补算完成：下周训练时长已缩短一档，训练频次保持不变。";
+      } else if (summary.topReason === "不想练") {
+        nextWeek.forEach(item => {
+          if (item.display_type === summary.topType && item.exercises[0]) item.exercises[0].name = `替换动作：${item.exercises[0].name}`;
+        });
+        message = "跨周补算完成：下周已替换被连续搁置类型的主动作。";
+      }
+      state.weeklyAdjustments ||= [];
+      state.weeklyAdjustments.push({ date: boundaryKey, message });
+      state.lastWeeklyAdjustment = boundaryKey;
+      if (state.notifications_enabled && state.notificationPrefs?.weekly !== false) refreshNotifications("周度调整完成");
+      return true;
+    }
+
+    function latestPassedWeeklyBoundary(ref) {
+      const base = stripTime(ref);
+      const offset = (base.getDay() + 1) % 7;
+      const boundary = new Date(base.getTime() - offset * DAY);
+      return boundary < base || base.getDay() === 6 ? boundary : null;
+    }
+
+    function nextWeeklyBoundary(ref) {
+      const base = stripTime(ref);
+      const offset = (6 - base.getDay() + 7) % 7;
+      return new Date(base.getTime() + offset * DAY);
+    }
+
+    function weeklySummaryForBoundary(boundary) {
+      const weekStart = new Date(boundary.getTime() - 5 * DAY);
+      const weekEnd = new Date(boundary.getTime() - DAY);
+      const weekPlan = state.plan.filter(item => parseIso(item.date) >= weekStart && parseIso(item.date) <= weekEnd);
+      const weekDefers = state.deferrals.filter(item => parseIso(item.date) >= weekStart && parseIso(item.date) <= weekEnd);
+      const silent = weekPlan.filter(item => item.status === "未开始" && parseIso(item.date) < boundary && item.display_type !== "休息").length;
+      const reasonCounts = weekDefers.reduce((acc, item) => {
+        acc[item.reason] = (acc[item.reason] || 0) + 1;
+        return acc;
+      }, {});
+      const typeCounts = weekDefers.reduce((acc, item) => {
+        acc[item.workout_type] = (acc[item.workout_type] || 0) + 1;
+        return acc;
+      }, {});
+      return {
+        weekStart,
+        weekEnd,
+        weekPlan,
+        weekDefers,
+        silent,
+        topReason: Object.entries(reasonCounts).sort((a, b) => b[1] - a[1])[0]?.[0],
+        topType: Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0]
+      };
+    }
+
+    function submitFollowup() {
+      const pain = document.getElementById("followupPain").value.trim();
+      const goalChanged = document.getElementById("followupGoalChanged").value === "true";
+      const wearableText = document.getElementById("followupWearable").value.trim();
+      const form = {
+        date: iso(today),
+        weight_or_girth_change: document.getElementById("followupWeight").value.trim() || null,
+        self_completion_rate: document.getElementById("followupCompletion").value,
+        perceived_fatigue: document.getElementById("followupFatigue").value,
+        new_pain_or_discomfort: pain || null,
+        goal_changed: goalChanged,
+        new_goal: goalChanged ? document.getElementById("followupGoal").value : null,
+        sleep_stress_change: document.getElementById("followupSleepStress").value,
+        difficulty_feedback: document.getElementById("followupDifficulty").value,
+        wearable_update: null
+      };
+      if (wearableText) {
+        try { form.wearable_update = JSON.parse(wearableText); } catch { form.wearable_update = { notes: wearableText }; }
+      }
+      state.followups ||= [];
+      state.followups.push(form);
+      if (goalChanged) state.profile.goal = form.new_goal;
+      if (pain) state.profile.constraints.injuries = [...new Set([...state.profile.constraints.injuries, pain])];
+      if (form.wearable_update) state.profile.wearable_summary = form.wearable_update;
+      if (form.difficulty_feedback === "太累") {
+        state.plan.filter(item => parseIso(item.date) > today && item.display_type !== "休息").slice(0, 4).forEach(item => {
+          item.intensity_factor = Math.max(.65, Number(((item.intensity_factor ?? 1) - .1).toFixed(2)));
+        });
+      }
+      state.profile.keywords = makeKeywords(state.profile);
+      state.followupDueReason = null;
+      saveState();
+      render();
+    }
+
+    function clearTimer() {
+      if (timerId) clearInterval(timerId);
+      timerId = null;
+      timerRunning = false;
+    }
+
+    function formatTime(total) {
+      const min = Math.floor(total / 60).toString().padStart(2, "0");
+      const sec = Math.max(0, total % 60).toString().padStart(2, "0");
+      return `${min}:${sec}`;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    }
+
+    function badgeSvg(type) {
+      const content = type === "done"
+        ? '<path d="M6 12.5l3.2 3.2L18 7.5" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>'
+        : type === "defer"
+          ? '<path d="M7 15c2-3 7-3 10 0M8 8h.1M16 8h.1" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M10 11h4" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>'
+          : '<path d="M12 5v8" stroke="#fff" stroke-width="2.8" stroke-linecap="round"/><circle cx="12" cy="17" r="1.7" fill="#fff"/>';
+      return `<span class="badge ${type}" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22">${content}</svg></span>`;
+    }
+
+    function mascotSvg(type) {
+      const pose = {
+        "推": { arm: "M30 25 L42 10 M48 10 h10", leg: "M31 45 L25 61 M39 45 L49 60", prop: '<rect x="46" y="7" width="14" height="6" rx="2" fill="#334155"/>' },
+        "拉": { arm: "M31 31 L48 35 M48 35 L58 30", leg: "M31 45 L24 58 M39 45 L50 54", prop: '<path d="M48 35h13" stroke="#334155" stroke-width="4" stroke-linecap="round"/>' },
+        "下肢": { arm: "M31 32 L21 39 M39 32 L50 39", leg: "M31 45 L23 51 L20 62 M39 45 L51 51 L56 62", prop: "" },
+        "核心": { arm: "M29 41 L18 49 M42 41 L52 49", leg: "M31 47 L21 54 M41 47 L53 54", prop: '<path d="M15 56h44" stroke="#8ab7a8" stroke-width="4" stroke-linecap="round"/>' },
+        "有氧": { arm: "M31 29 L21 22 M39 31 L52 27", leg: "M32 45 L21 58 M39 45 L56 50", prop: '<path d="M16 63c10 3 27 3 42 0" stroke="#2f6f9f" stroke-width="3" fill="none" stroke-linecap="round"/>' },
+        "拉伸": { arm: "M29 31 L16 39 M40 31 L52 18", leg: "M32 45 L18 61 M40 45 L55 61", prop: '<path d="M15 62h45" stroke="#b6c7d2" stroke-width="4" stroke-linecap="round"/>' },
+        "全身": { arm: "M30 29 L18 15 M40 29 L53 15", leg: "M31 45 L20 62 M40 45 L53 62", prop: '<path d="M15 18l-4-4M58 18l5-4" stroke="#c4493d" stroke-width="3" stroke-linecap="round"/>' },
+        "休息": { arm: "M30 38 L21 45 M41 38 L50 45", leg: "M32 46 L25 52 M40 46 L48 52", prop: '<path d="M17 56h42" stroke="#6b7280" stroke-width="5" stroke-linecap="round"/><path d="M48 19h9M52 14h10" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round"/>' },
+        "计划中": { arm: "M30 30 L19 18 M40 30 L52 19", leg: "M31 45 L26 60 M39 45 L45 60", prop: "" }
+      }[type] || { arm: "M30 32 L21 39 M40 32 L50 39", leg: "M31 45 L25 60 M39 45 L48 60", prop: "" };
+      return `
+        <svg class="mascot" viewBox="0 0 72 72" aria-hidden="true">
+          ${pose.prop}
+          <path d="${pose.leg}" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="${pose.arm}" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M25 25c0-9 6-16 13-16s13 7 13 16c0 8-5 14-13 14s-13-6-13-14z" fill="#f6c64c" stroke="#334155" stroke-width="3"/>
+          <path d="M29 13l-5-7 9 3M45 13l6-7-9 3" fill="#f6c64c" stroke="#334155" stroke-width="3" stroke-linejoin="round"/>
+          <circle cx="33" cy="25" r="2" fill="#334155"/>
+          <circle cx="43" cy="25" r="2" fill="#334155"/>
+          <path d="M36 30c2 2 4 2 6 0" fill="none" stroke="#334155" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M32 40h13l-2 11H34z" fill="#fff4c6" stroke="#334155" stroke-width="3" stroke-linejoin="round"/>
+        </svg>
+      `;
+    }
+
+    render();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
