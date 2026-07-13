@@ -454,6 +454,13 @@
       flex-wrap: wrap;
     }
 
+    .panel-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .month-title {
       font-size: 18px;
       font-weight: 800;
@@ -1153,7 +1160,12 @@
             <div class="month-title" id="monthTitle"></div>
             <button class="ghost" type="button" id="nextMonth" aria-label="下个月">›</button>
           </div>
-          <button class="secondary" type="button" id="resetDemo">重置演示</button>
+          <div class="panel-actions">
+            <button class="secondary" type="button" id="exportData">导出数据</button>
+            <button class="secondary" type="button" id="importData">导入数据</button>
+            <button class="secondary" type="button" id="resetDemo">重置演示</button>
+            <input class="file-input" id="stateImport" type="file" accept=".json,application/json">
+          </div>
         </div>
         <div class="stats">
           <div class="stat"><b id="statDone">0</b><span>已完成</span></div>
@@ -1213,6 +1225,7 @@
     const DAY = 24 * 60 * 60 * 1000;
     const today = stripTime(new Date());
     const storeKey = "fitness-agent-tool-v4";
+    const SCHEMA_VERSION = 5;
     const labels = ["推", "拉", "下肢", "核心", "有氧", "拉伸", "全身", "休息"];
     const reasons = ["太累", "没时间", "不想练", "身体不适"];
     const goalParams = {
@@ -1353,6 +1366,19 @@
       render();
       showToast("示例已重置");
     });
+    document.getElementById("exportData").addEventListener("click", () => {
+      exportStateBackup();
+    });
+    document.getElementById("importData").addEventListener("click", () => {
+      if (!confirm("导入会覆盖当前本机数据。建议先导出备份，确定继续导入吗？")) return;
+      document.getElementById("stateImport").click();
+    });
+    document.getElementById("stateImport").addEventListener("change", event => {
+      const file = event.target.files?.[0];
+      event.target.value = "";
+      if (!file) return;
+      importStateBackup(file);
+    });
     document.getElementById("closeDialog").addEventListener("click", () => {
       document.getElementById("deferDialog").close();
     });
@@ -1468,26 +1494,42 @@
     }
 
     function normalizeState(next) {
+      next.schema_version = SCHEMA_VERSION;
       next.followups ||= [];
       next.weeklyAdjustments ||= [];
       next.notificationPrefs ||= { workout: true, silent: true, followup: true, weekly: true };
       next.notificationQueue ||= [];
       next.notifications_enabled = Boolean(next.notifications_enabled);
       next.activeTab ||= "calendar";
+      next.deferrals ||= [];
+      next.checks ||= {};
       next.profile ||= {};
       normalizeProfile(next.profile);
       next.profile.wearable_source ||= next.profile.wearable_summary ? "manual" : "none";
       next.profile.program_start ||= next.profileStartedAt || iso(today);
-      next.profile.recovery_modifier = recoveryModifier(next.profile);
-      next.profile.volume_targets = weeklyVolumeTargets(next.profile);
-      if (!next.plan?.some(item => item.volume_targets)) {
-        next.plan = buildPlan(next.profile);
-        next.checks = {};
-      }
-      next.plan?.forEach(item => {
-        if (item.display_type !== "休息" && typeof item.intensity_factor !== "number") item.intensity_factor = 1;
-      });
+      if (!next.profile.lifestyle) next.profile.lifestyle = "";
+      if (typeof next.profile.recovery_modifier !== "number") next.profile.recovery_modifier = recoveryModifier(next.profile);
+      if (!next.profile.volume_targets || !Object.keys(next.profile.volume_targets).length) next.profile.volume_targets = weeklyVolumeTargets(next.profile);
+      if (!Array.isArray(next.profile.keywords)) next.profile.keywords = makeKeywords(next.profile);
+      next.plan = Array.isArray(next.plan) ? next.plan.filter(Boolean) : [];
+      next.plan.forEach(item => migratePlanItem(item, next.profile));
       return next;
+    }
+
+    function migratePlanItem(item, profile) {
+      item.display_type ||= item.workout_type || "休息";
+      item.mode ||= ["有氧", "拉伸"].includes(item.display_type) ? "duration" : "sets";
+      if (typeof item.intensity_factor !== "number") item.intensity_factor = item.display_type === "休息" ? 0 : 1;
+      if (typeof item.recovery_modifier !== "number") item.recovery_modifier = profile.recovery_modifier || recoveryModifier(profile);
+      if (!item.volume_targets) item.volume_targets = { ...profile.volume_targets };
+      if (typeof item.session_minutes !== "number") item.session_minutes = profile.availability?.session_minutes || 45;
+      item.exercises = Array.isArray(item.exercises) ? item.exercises : [];
+      item.exercises.forEach(exercise => {
+        exercise.muscle_groups ||= [];
+        exercise.equipment ||= ["无器械"];
+        if (!exercise.per_set_target && exercise.reps_or_duration) exercise.per_set_target = perSetTarget(exercise.reps_or_duration, item.display_type);
+      });
+      item.status ||= item.display_type === "休息" ? "休息日" : "未开始";
     }
 
     function seedState() {
@@ -1515,6 +1557,7 @@
       profile.volume_targets = weeklyVolumeTargets(profile);
       profile.keywords = makeKeywords(profile);
       const seeded = {
+        schema_version: SCHEMA_VERSION,
         profile,
         profileStartedAt: iso(today),
         plan: buildPlan(profile),
@@ -1539,7 +1582,40 @@
     }
 
     function saveState() {
+      state.schema_version = SCHEMA_VERSION;
       localStorage.setItem(storeKey, JSON.stringify(state));
+    }
+
+    function exportStateBackup() {
+      state.schema_version = SCHEMA_VERSION;
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `fitness-backup-${iso(today)}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast("数据已导出");
+    }
+
+    function importStateBackup(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || ""));
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid backup");
+          state = normalizeState(parsed);
+          selectedDate = state.plan.some(item => item.date === selectedDate) ? selectedDate : state.plan[0]?.date || iso(today);
+          saveState();
+          render();
+          showToast("数据已导入");
+        } catch {
+          showToast("导入失败：文件不是有效备份");
+        }
+      };
+      reader.readAsText(file, "utf-8");
     }
 
     function readProfile() {
@@ -2643,7 +2719,7 @@
   </script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').then(registration => registration.update()).catch(() => {}));
     }
   </script>
 </body>
