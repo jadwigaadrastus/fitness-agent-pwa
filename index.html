@@ -1003,9 +1003,20 @@
               <label class="choice"><input type="checkbox" name="deprioritize" value="腿">腿</label>
               <label class="choice"><input type="checkbox" name="deprioritize" value="核心">核心</label>
             </div>
-          </div>          <div class="field">
-            <label for="equipment">可用器械</label>
-            <input id="equipment" value="哑铃, 弹力带, 瑜伽垫">
+          </div>
+          <div class="field">
+            <label>可用器械</label>
+            <div class="choice-grid" id="equipmentChoices">
+              <label class="choice"><input type="checkbox" name="equipment" value="无器械">无器械</label>
+              <label class="choice"><input type="checkbox" name="equipment" value="哑铃">哑铃</label>
+              <label class="choice"><input type="checkbox" name="equipment" value="弹力带">弹力带</label>
+              <label class="choice"><input type="checkbox" name="equipment" value="壶铃">壶铃</label>
+              <label class="choice"><input type="checkbox" name="equipment" value="杠铃">杠铃</label>
+              <label class="choice"><input type="checkbox" name="equipment" value="单杠">单杠</label>
+              <label class="choice"><input type="checkbox" name="equipment" value="瑜伽垫">瑜伽垫</label>
+              <label class="choice"><input type="checkbox" name="equipment" value="健身房器械">健身房器械</label>
+            </div>
+            <div class="small-note">勾选“无器械”会自动取消其他器械；动作会按这里过滤，不会安排缺少器械的训练。</div>
           </div>
           <div class="field">
             <label for="injuries">伤病与限制</label>
@@ -1035,6 +1046,10 @@
           <div class="field">
             <label for="wearable">健康数据摘要</label>
             <textarea id="wearable">{"period":"最近90天","avg_sleep_hours":6.5,"sleep_consistency":"不稳定","avg_daily_steps":6200,"hrv_trend":"持平","notes":"工作日活动少"}</textarea>
+            <div class="prompt-actions">
+              <button class="secondary" type="button" id="pasteWearableJson">粘贴并覆盖</button>
+              <button class="ghost" type="button" id="clearWearableJson">清空</button>
+            </div>
           </div>
           <button class="primary" type="submit">生成 30 天计划</button>
           <div>
@@ -1264,32 +1279,40 @@
 3. logged_workouts 汇总近 90 天主要运动类型、每周频次、平均时长。
 4. notes 用一句话说明会影响训练计划的客观信号，例如睡眠不足、步数偏低、心率偏高、训练记录与自述不一致。
 5. 最终只返回 JSON。`;
+
+    function exerciseSpec(name, muscle_groups, sets, reps_or_duration, tutorial_url, equipment = ["无器械"], bodyweight_fallback = null) {
+      return { name, muscle_groups, sets, reps_or_duration, tutorial_url, equipment, bodyweight_fallback };
+    }
+
+    function fallbackSpec(name, muscle_groups, sets, reps_or_duration) {
+      return { name, muscle_groups, sets, reps_or_duration, tutorial_url: "https://www.youtube.com/results?search_query=" + encodeURIComponent(name + " 徒手 教程"), equipment: ["无器械"] };
+    }
     const templates = {
       "推": [
-        ["哑铃肩推", ["肩", "三头"], 3, "8-10 次", "https://www.youtube.com/results?search_query=%E5%93%91%E9%93%83+%E8%82%A9%E6%8E%A8+%E6%95%99%E7%A8%8B"],
-        ["跪姿俯卧撑", ["胸", "肩", "三头"], 3, "10-12 次", "https://www.youtube.com/results?search_query=%E4%BF%AF%E5%8D%A7%E6%92%91+%E5%88%9D%E5%AD%A6%E8%80%85+%E6%95%99%E7%A8%8B"]
+        exerciseSpec("哑铃肩推", ["肩", "三头"], 3, "8-10 次", "https://www.youtube.com/results?search_query=%E5%93%91%E9%93%83+%E8%82%A9%E6%8E%A8+%E6%95%99%E7%A8%8B", ["哑铃"], fallbackSpec("俯身 Y-T-W", ["肩", "上背"], 3, "每式 6-8 次")),
+        exerciseSpec("跪姿俯卧撑", ["胸", "肩", "三头"], 3, "10-12 次", "https://www.youtube.com/results?search_query=%E4%BF%AF%E5%8D%A7%E6%92%91+%E5%88%9D%E5%AD%A6%E8%80%85+%E6%95%99%E7%A8%8B", ["无器械"], null)
       ],
       "拉": [
-        ["弹力带划船", ["背", "二头"], 3, "12 次", "https://www.youtube.com/results?search_query=%E5%BC%B9%E5%8A%9B%E5%B8%A6+%E5%88%92%E8%88%B9+%E6%95%99%E7%A8%8B"],
-        ["哑铃俯身划船", ["背", "二头"], 3, "10 次", "https://www.youtube.com/results?search_query=%E5%93%91%E9%93%83+%E4%BF%AF%E8%BA%AB%E5%88%92%E8%88%B9+%E6%95%99%E7%A8%8B"]
+        exerciseSpec("弹力带划船", ["背", "二头"], 3, "12 次", "https://www.youtube.com/results?search_query=%E5%BC%B9%E5%8A%9B%E5%B8%A6+%E5%88%92%E8%88%B9+%E6%95%99%E7%A8%8B", ["弹力带"], fallbackSpec("俯卧 W 划船", ["背", "二头"], 3, "10-12 次")),
+        exerciseSpec("哑铃俯身划船", ["背", "二头"], 3, "10 次", "https://www.youtube.com/results?search_query=%E5%93%91%E9%93%83+%E4%BF%AF%E8%BA%AB%E5%88%92%E8%88%B9+%E6%95%99%E7%A8%8B", ["哑铃"], fallbackSpec("俯卧反向划船", ["背", "二头"], 3, "10-12 次"))
       ],
       "下肢": [
-        ["箱式深蹲", ["臀", "大腿前侧"], 3, "8-10 次", "https://www.youtube.com/results?search_query=%E7%AE%B1%E5%BC%8F%E6%B7%B1%E8%B9%B2+%E8%86%9D%E7%9B%96+%E6%95%99%E7%A8%8B"],
-        ["臀桥", ["臀", "大腿后侧"], 3, "12 次", "https://www.youtube.com/results?search_query=%E8%87%80%E6%A1%A5+%E6%95%99%E7%A8%8B"]
+        exerciseSpec("箱式深蹲", ["臀", "大腿前侧"], 3, "8-10 次", "https://www.youtube.com/results?search_query=%E7%AE%B1%E5%BC%8F%E6%B7%B1%E8%B9%B2+%E8%86%9D%E7%9B%96+%E6%95%99%E7%A8%8B", ["无器械"], null),
+        exerciseSpec("臀桥", ["臀", "大腿后侧"], 3, "12 次", "https://www.youtube.com/results?search_query=%E8%87%80%E6%A1%A5+%E6%95%99%E7%A8%8B", ["无器械"], null)
       ],
       "核心": [
-        ["死虫", ["腹", "下背"], 3, "每侧 8 次", "https://www.youtube.com/results?search_query=%E6%AD%BB%E8%99%AB+%E6%A0%B8%E5%BF%83+%E6%95%99%E7%A8%8B"],
-        ["侧桥", ["腹", "下背"], 2, "每侧 30 秒", "https://www.youtube.com/results?search_query=%E4%BE%A7%E6%A1%A5+%E6%95%99%E7%A8%8B"]
+        exerciseSpec("死虫", ["腹", "下背"], 3, "每侧 8 次", "https://www.youtube.com/results?search_query=%E6%AD%BB%E8%99%AB+%E6%A0%B8%E5%BF%83+%E6%95%99%E7%A8%8B", ["无器械"], null),
+        exerciseSpec("侧桥", ["腹", "下背"], 2, "每侧 30 秒", "https://www.youtube.com/results?search_query=%E4%BE%A7%E6%A1%A5+%E6%95%99%E7%A8%8B", ["无器械"], null)
       ],
       "有氧": [
-        ["低冲击快走", ["心肺"], null, "20-30 分钟", "https://www.youtube.com/results?search_query=%E4%BD%8E%E5%86%B2%E5%87%BB+%E6%9C%89%E6%B0%A7+%E6%95%99%E7%A8%8B"]
+        exerciseSpec("低冲击快走", ["心肺"], null, "20-30 分钟", "https://www.youtube.com/results?search_query=%E4%BD%8E%E5%86%B2%E5%87%BB+%E6%9C%89%E6%B0%A7+%E6%95%99%E7%A8%8B", ["无器械"], null)
       ],
       "拉伸": [
-        ["髋屈肌拉伸", ["髋", "大腿前侧"], null, "8-12 分钟", "https://www.youtube.com/results?search_query=%E9%AB%8B%E5%B1%88%E8%82%8C+%E6%8B%89%E4%BC%B8+%E6%95%99%E7%A8%8B"]
+        exerciseSpec("髋屈肌拉伸", ["髋", "大腿前侧"], null, "8-12 分钟", "https://www.youtube.com/results?search_query=%E9%AB%8B%E5%B1%88%E8%82%8C+%E6%8B%89%E4%BC%B8+%E6%95%99%E7%A8%8B", ["无器械"], null)
       ],
       "全身": [
-        ["哑铃罗马尼亚硬拉", ["臀", "大腿后侧", "背"], 2, "10 次", "https://www.youtube.com/results?search_query=%E5%93%91%E9%93%83+%E7%BD%97%E9%A9%AC%E5%B0%BC%E4%BA%9A%E7%A1%AC%E6%8B%89+%E6%95%99%E7%A8%8B"],
-        ["弹力带推拉组合", ["胸", "背", "肩"], 2, "12 次", "https://www.youtube.com/results?search_query=%E5%BC%B9%E5%8A%9B%E5%B8%A6+%E5%85%A8%E8%BA%AB+%E8%AE%AD%E7%BB%83"]
+        exerciseSpec("哑铃罗马尼亚硬拉", ["臀", "大腿后侧", "背"], 2, "10 次", "https://www.youtube.com/results?search_query=%E5%93%91%E9%93%83+%E7%BD%97%E9%A9%AC%E5%B0%BC%E4%BA%9A%E7%A1%AC%E6%8B%89+%E6%95%99%E7%A8%8B", ["哑铃"], fallbackSpec("早安式髋铰链", ["臀", "大腿后侧", "背"], 3, "10-12 次")),
+        exerciseSpec("弹力带推拉组合", ["胸", "背", "肩"], 2, "12 次", "https://www.youtube.com/results?search_query=%E5%BC%B9%E5%8A%9B%E5%B8%A6+%E5%85%A8%E8%BA%AB+%E8%AE%AD%E7%BB%83", ["弹力带"], fallbackSpec("深蹲到平板支撑", ["胸", "背", "肩", "臀", "大腿前侧", "腹"], 2, "6-8 次"))
       ],
       "休息": []
     };
@@ -1333,6 +1356,7 @@
     document.getElementById("closeDialog").addEventListener("click", () => {
       document.getElementById("deferDialog").close();
     });
+    bindEquipmentChoices();
     document.getElementById("copyWearablePrompt").addEventListener("click", async () => {
       const promptBox = document.getElementById("wearablePrompt");
       const status = document.getElementById("uploadStatus");
@@ -1353,13 +1377,35 @@
       reader.onload = () => {
         try {
           const parsed = JSON.parse(String(reader.result || ""));
-          document.getElementById("wearable").value = JSON.stringify(parsed, null, 2);
-          status.textContent = "已回填健康数据摘要。确认无误后点击生成 30 天计划。";
+          applyWearableJson(parsed, "已回填健康数据摘要。确认无误后点击生成 30 天计划。");
         } catch {
           status.textContent = "上传内容不是合法 JSON，请让 AI 只输出 JSON 后再上传。";
         }
       };
       reader.readAsText(file, "utf-8");
+    });
+    document.getElementById("pasteWearableJson").addEventListener("click", async () => {
+      const status = document.getElementById("uploadStatus");
+      try {
+        const text = await navigator.clipboard.readText();
+        const parsed = JSON.parse(text);
+        applyWearableJson(parsed, "已从剪贴板粘贴并覆盖健康数据摘要。");
+      } catch {
+        status.textContent = "剪贴板内容不是合法 JSON，未覆盖。";
+      }
+    });
+    document.getElementById("clearWearableJson").addEventListener("click", () => {
+      document.getElementById("wearable").value = "";
+      state.profile.wearable_summary = null;
+      state.profile.wearable_source = "manual";
+      state.profile.recovery_modifier = recoveryModifier(state.profile);
+      state.profile.volume_targets = weeklyVolumeTargets(state.profile);
+      state.profile.keywords = makeKeywords(state.profile);
+      saveState();
+      renderTags();
+      renderVolumeTargets();
+      renderFollowup();
+      document.getElementById("uploadStatus").textContent = "健康数据摘要已清空。";
     });
     document.getElementById("submitFollowup").addEventListener("click", () => {
       submitFollowup();
@@ -1513,7 +1559,7 @@
           days_per_week: clamp(Number(document.getElementById("days").value || 4), 1, 6),
           session_minutes: clamp(Number(document.getElementById("minutes").value || 45), 15, 120)
         },
-        equipment: splitInput(document.getElementById("equipment").value),
+        equipment: checkedValues("equipment"),
         goal: document.getElementById("goal").value,
         level: document.getElementById("level").value,
         sex: document.getElementById("sex").value || null,
@@ -1539,7 +1585,7 @@
       profile.constraints ||= { injuries: [], medical_notes: "" };
       profile.constraints.injuries ||= [];
       profile.availability ||= { days_per_week: 4, session_minutes: 45 };
-      profile.equipment ||= [];
+      profile.equipment = normalizeEquipment(profile.equipment);
       profile.goal ||= "健康维护";
       profile.level ||= "新手";
       profile.sex ||= null;
@@ -1570,6 +1616,25 @@
       return Number.isFinite(value) && value > 0 ? value : null;
     }
 
+    function normalizeEquipment(value) {
+      const allowed = ["无器械", "哑铃", "弹力带", "壶铃", "杠铃", "单杠", "瑜伽垫", "健身房器械"];
+      const list = Array.isArray(value) ? value : splitInput(String(value || ""));
+      const cleaned = [...new Set(list.filter(item => allowed.includes(item)))];
+      if (!cleaned.length || cleaned.includes("无器械")) return ["无器械"];
+      return cleaned;
+    }
+
+    function bindEquipmentChoices() {
+      document.querySelectorAll('input[name="equipment"]').forEach(input => {
+        input.addEventListener("change", () => {
+          const none = document.querySelector('input[name="equipment"][value="无器械"]');
+          const others = Array.from(document.querySelectorAll('input[name="equipment"]')).filter(item => item.value !== "无器械");
+          if (input.value === "无器械" && input.checked) others.forEach(item => { item.checked = false; });
+          if (input.value !== "无器械" && input.checked) none.checked = false;
+          if (!none.checked && others.every(item => !item.checked)) none.checked = true;
+        });
+      });
+    }
     function checkedValues(name) {
       return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(input => input.value);
     }
@@ -1810,11 +1875,15 @@
     function makeExercises(type, profile, intensity = 1, dryRun = false, weekVolume = null) {
       const params = goalParams[profile.goal] || goalParams["健康维护"];
       const rules = matchedInjuryRules(profile);
-      let base = (templates[type] || []).map(([name, muscle_groups, sets, reps_or_duration, tutorial_url]) => {
+      const available = normalizeEquipment(profile.equipment);
+      let base = (templates[type] || []).map(entry => {
+        const picked = equipmentSatisfied(entry, available) ? entry : entry.bodyweight_fallback;
+        if (!picked) return null;
+        const { name, muscle_groups, sets, reps_or_duration, tutorial_url, equipment } = picked;
         let nextName = name;
         let nextReps = tuneReps(reps_or_duration, params, type);
         for (const rule of rules) {
-          const replacement = rule.replacements[name];
+          const replacement = rule.replacements[name] || rule.replacements[entry.name];
           const hitsMuscle = muscle_groups.some(muscle => rule.muscles.includes(muscle));
           if (replacement || hitsMuscle) {
             nextName = replacement?.[0] || nextName;
@@ -1825,12 +1894,34 @@
         const highestNeed = targetMuscles.reduce((max, muscle) => Math.max(max, ((profile.volume_targets || {})[muscle] || 0) - ((weekVolume || {})[muscle] || 0)), 0);
         const volumeDelta = highestNeed >= 6 ? 1 : highestNeed <= 0 ? -1 : 0;
         const tunedSets = sets == null ? null : clamp(sets + params.setDelta + volumeDelta - (intensity < .9 ? 1 : 0), 1, 6);
-        return { name: nextName, muscle_groups, sets: tunedSets, reps_or_duration: nextReps, per_set_target: perSetTarget(nextReps, type), tutorial_url };
-      });
+        return { name: nextName, muscle_groups, sets: tunedSets, reps_or_duration: nextReps, per_set_target: perSetTarget(nextReps, type), tutorial_url, equipment };
+      }).filter(Boolean);
+      if (!base.length && type !== "休息") base = fallbackExercisesForType(type, params);
       if (!dryRun && rules.length && base.length) {
         base[0].reps_or_duration = addReserveCue(base[0].reps_or_duration);
+        base[0].per_set_target = perSetTarget(base[0].reps_or_duration, type);
       }
       return base;
+    }
+
+    function equipmentSatisfied(exercise, available) {
+      const needs = exercise.equipment || ["无器械"];
+      if (needs.includes("无器械")) return true;
+      if (available.includes("无器械")) return false;
+      return needs.every(item => available.includes(item));
+    }
+
+    function fallbackExercisesForType(type, params) {
+      const fallbacks = {
+        "推": [fallbackSpec("跪姿俯卧撑", ["胸", "肩", "三头"], 3, params.reps)],
+        "拉": [fallbackSpec("俯卧 W 划船", ["背", "二头"], 3, params.reps)],
+        "下肢": [fallbackSpec("徒手深蹲", ["臀", "大腿前侧"], 3, params.reps), fallbackSpec("臀桥", ["臀", "大腿后侧"], 3, params.reps)],
+        "核心": [fallbackSpec("死虫", ["腹", "下背"], 3, "每侧 8 次")],
+        "全身": [fallbackSpec("深蹲到平板支撑", ["胸", "肩", "臀", "大腿前侧", "腹"], 2, "6-8 次")],
+        "有氧": [fallbackSpec("低冲击快走", ["心肺"], null, "20-30 分钟")],
+        "拉伸": [fallbackSpec("髋屈肌拉伸", ["髋", "大腿前侧"], null, "8-12 分钟")]
+      };
+      return (fallbacks[type] || []).map(item => ({ ...item, per_set_target: perSetTarget(item.reps_or_duration, type) }));
     }
 
     function tuneReps(value, params, type) {
@@ -1873,11 +1964,11 @@
       setCheckedValues("deprioritize", p.deprioritize || []);
       document.getElementById("days").value = p.availability.days_per_week;
       document.getElementById("minutes").value = p.availability.session_minutes;
-      document.getElementById("equipment").value = p.equipment.join(", ");
+      setCheckedValues("equipment", normalizeEquipment(p.equipment));
       document.getElementById("injuries").value = p.constraints.injuries.join(", ");
       document.getElementById("lifestyle").value = p.lifestyle;
       document.getElementById("wearablePrompt").value = wearablePrompt;
-      document.getElementById("wearable").value = JSON.stringify(p.wearable_summary, null, 2);
+      document.getElementById("wearable").value = p.wearable_summary ? JSON.stringify(p.wearable_summary, null, 2) : "";
       document.getElementById("nativeHealthStatus").textContent = wearableSourceText(p.wearable_source, p.wearable_summary);
       document.getElementById("notifyEnabled").checked = Boolean(state.notifications_enabled);
       document.getElementById("notifyWorkout").checked = state.notificationPrefs?.workout !== false;
@@ -1965,6 +2056,19 @@
       renderFollowup();
     }
 
+    function applyWearableJson(parsed, message) {
+      document.getElementById("wearable").value = JSON.stringify(parsed, null, 2);
+      state.profile.wearable_summary = parsed;
+      state.profile.wearable_source = "manual";
+      state.profile.recovery_modifier = recoveryModifier(state.profile);
+      state.profile.volume_targets = weeklyVolumeTargets(state.profile);
+      state.profile.keywords = makeKeywords(state.profile);
+      saveState();
+      renderTags();
+      renderVolumeTargets();
+      renderFollowup();
+      document.getElementById("uploadStatus").textContent = message;
+    }
     function mockNativeHealthSummary() {
       return {
         period: "最近90天",
